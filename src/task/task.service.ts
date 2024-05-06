@@ -23,16 +23,6 @@ export class TasksService implements OnModuleInit {
     private readonly messageService: MessageService,
   ) {}
 
-  async onModuleInit() {
-    await this.messagesHandler();
-  }
-
-  private async initSession() {
-    await whatsapp.startSession('main');
-
-    whatsapp.loadSessionsFromStorage();
-  }
-
   @Cron('0 0 0 * * *', { name: 'resetUsage' })
   async resetUsage() {
     await this.userService.update({}, { usage: 0 });
@@ -43,22 +33,19 @@ export class TasksService implements OnModuleInit {
     await this.subscriptionService.remove({});
   }
 
+  async onModuleInit() {
+    await this.messagesHandler();
+  }
+
   async messagesHandler() {
     await this.initSession();
-
-    whatsapp.onQRUpdated(({ sessionId, qr }) => {
-      const qr_png = qr_image.image(qr, { type: 'png' });
-      qr_png.pipe(
-        fs.createWriteStream(path.join(process.cwd(), `qr-${sessionId}.png`)),
-      );
-    });
 
     whatsapp.onConnected(() => {
       this.logger.log('WhatsApp connected');
     });
 
-    whatsapp.onDisconnected(() => {
-      this.initSession();
+    whatsapp.onDisconnected(async () => {
+      await this.initSession();
     });
 
     whatsapp.onMessageReceived(this.onMessage.bind(this));
@@ -193,5 +180,13 @@ export class TasksService implements OnModuleInit {
     });
 
     return session;
+  }
+
+  private async initSession() {
+    await whatsapp.startSession('main', {
+      printQR: true,
+    });
+
+    whatsapp.loadSessionsFromStorage();
   }
 }

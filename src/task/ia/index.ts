@@ -33,8 +33,6 @@ export class IA {
       },
     ];
 
-    console.log('messages', messages);
-
     const res = await this.g4f.chatCompletion(messages);
 
     return res;
